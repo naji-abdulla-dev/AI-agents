@@ -178,11 +178,19 @@ class Domain:
 
     @property
     def instructions_path(self) -> Path:
-        return self.dir / "instructions.md"
+        return self.dir / "INSTRUCTIONS.md"
 
     @property
     def work_path(self) -> Path:
-        return self.dir / "work.md"
+        return self.dir / "WORK.md"
+
+    @property
+    def claude_md_path(self) -> Path:
+        return self.dir / "CLAUDE.md"
+
+    @property
+    def knowledgebase_path(self) -> Path:
+        return self.dir / "KNOWLEDGEBASE.md"
 
     @property
     def tmp_dir(self) -> Path:
@@ -205,18 +213,25 @@ class Domain:
         return not NO_ACTIVE_TASK_RE.search(content)
 
     def build_prompt(self) -> str:
-        instructions = self.instructions_path.read_text()
-        work = self.work_path.read_text()
-        return (
-            f"You are working in the directory: {self.dir}\n\n"
-            f"## Instructions\n{instructions}\n\n"
-            f"## Current Work\n{work}\n\n"
+        parts: list[str] = [f"You are working in the directory: {self.dir}"]
+
+        if self.claude_md_path.is_file():
+            parts.append(f"## Domain Guidance\n{self.claude_md_path.read_text()}")
+
+        if self.knowledgebase_path.is_file():
+            parts.append(f"## Knowledge Base\n{self.knowledgebase_path.read_text()}")
+
+        parts.append(f"## Instructions\n{self.instructions_path.read_text()}")
+        parts.append(f"## Current Work\n{self.work_path.read_text()}")
+        parts.append(
             f"## Important\n"
             f"- Save final output files (docx, xlsx, pdf) to: {self.output_dir}/\n"
             f"- Save intermediate/temporary files (python scripts, etc.) to: {self.tmp_dir}/\n"
             f"- Work within the scope defined above.\n"
             f"- Be thorough and follow the instructions precisely.\n"
         )
+
+        return "\n\n".join(parts)
 
     def reset_work(self) -> None:
         self.work_path.write_text("(No active task)\n")
